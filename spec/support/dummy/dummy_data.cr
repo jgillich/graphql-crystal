@@ -1,4 +1,4 @@
-require "../../../src/graphql-crystal/types/object_type"
+require "../../../src/graphql/types/object_type"
 
 module Dummy
   class Cheese

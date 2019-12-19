@@ -1,6 +1,6 @@
 require "./dummy_data"
 require "./dummy_schema_string"
-require "../../../src/graphql-crystal/schema" # def fetchItem(type, data : Hash)
+require "../../../src/graphql/schema" # def fetchItem(type, data : Hash)
 #   Proc(Hash(String, JSON::Type), JSON::Type).new do |args|
 #     data.find(&.[0].to_s.==(args["id"].to_s)).not_nil![1].as(JSON::Type)
 #   end
