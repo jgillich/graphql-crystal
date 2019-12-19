@@ -1,8 +1,9 @@
-name: graphql-crystal
+name: graphql
 version: 0.1.5
 
 authors:
-- ziprandom - <ziprandom@gmail.com>
+  - ziprandom <ziprandom@gmail.com>
+  - Jakob Gillich <jakob@gillich.me>
 
 crystal: 0.25.0
 
