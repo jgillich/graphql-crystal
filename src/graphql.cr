@@ -1,5 +1,5 @@
 require "./graphql/*"
 
 module GraphQL
-  # TODO Put your code here
+  VERSION = "0.1.5"
 end

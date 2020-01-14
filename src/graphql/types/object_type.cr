@@ -166,7 +166,6 @@ module GraphQL
     # for every ObjectType
     #
     def resolve_field(name, arguments, context)
-      pp "field not defined", name, self.class
       raise "field #{name} is not defined for #{self.class.name}"
     end
 
