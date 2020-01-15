@@ -250,10 +250,16 @@ module GraphQL
       end
 
       def self.generate_description(node, indent = "", first_in_block = true)
-        return "" unless node.description
+        return "" unless node_description = node.description
 
         description = indent != "" && !first_in_block ? "\n" : ""
-        description += "#{indent}# #{node.description}\n"
+        if node_description.includes?('\n')
+          description += "#{indent}\"\"\""
+          description += node_description.split('\n').map { |s| "#{indent}#{s.strip}" }.join('\n')
+          description += "#{indent}\"\"\""
+        else
+          description += "#{indent}\"#{node.description}\"\n"
+        end
       end
 
       def self.generate_field_definitions(fields, indent : String = "")

@@ -10,8 +10,8 @@ end
 
 def clean_string(string)
   string.gsub(/^  /m, "")
-        .gsub(/#[^\n]*\n/m, "\n")
-        .gsub(/[\n\s]+/m, "\n").strip
+    .gsub(/#[^\n]*\n/m, "\n")
+    .gsub(/[\n\s]+/m, "\n").strip
 end
 
 describe GraphQL::Language::Generation do
@@ -48,11 +48,11 @@ describe GraphQL::Language::Generation do
     end
 
     context "inputs" do
-      query_string = <<-query
+      query_string = <<-QUERY
         query {
           field(null_value: null, null_in_array: [1, null, 3], int: 3, float: 4.7e-24, bool: false, string: "☀︎🏆\\n escaped \\" unicode ¶ /", enum: ENUM_NAME, array: [7, 8, 9], object: {a: [1, 2, 3], b: {c: "4"}}, unicode_bom: "\xef\xbb\xbfquery")
         }
-      query
+      QUERY
       document = GraphQL::Language::Parser.parse(query_string)
 
       it "generate" do
@@ -127,13 +127,13 @@ describe GraphQL::Language::Generation do
 
       describe "full featured schema" do
         # From: https://github.com/graphql/graphql-js/blob/bc96406ab44453a120da25a0bd6e2b0237119ddf/src/language/__tests__/schema-kitchen-sink.graphql
-        query_string = <<-schema
+        query_string = <<-SCHEMA
           schema {
             query: QueryType
             mutation: MutationType
           }
 
-          # Union description
+          "Union description"
           union AnnotatedUnion @onUnion = A | B
 
           type Foo implements Bar {
@@ -145,7 +145,7 @@ describe GraphQL::Language::Generation do
             six(argument: InputType = {key: "value"}): Type
           }
 
-          # Scalar description
+          "Scalar description"
           scalar CustomScalar
 
           type AnnotatedObject @onObject(arg: "value") {
@@ -157,9 +157,9 @@ describe GraphQL::Language::Generation do
             four(argument: String = "string"): String
           }
 
-          # Enum description
+          "Enum description"
           enum Site {
-            # Enum value description
+            "Enum value description"
             DESKTOP
             MOBILE
           }
@@ -170,7 +170,7 @@ describe GraphQL::Language::Generation do
 
           union Feed = Story | Article | Advert
 
-          # Input description
+          "Input description"
           input InputType {
             key: String!
             answer: Int = 42
@@ -180,7 +180,7 @@ describe GraphQL::Language::Generation do
 
           scalar CustomScalar
 
-          # Directive description
+          "Directive description"
           directive @skip(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
 
           scalar AnnotatedScalar @onScalar
@@ -207,7 +207,7 @@ describe GraphQL::Language::Generation do
           directive @skip(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
 
           directive @include(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
-        schema
+        SCHEMA
 
         document = GraphQL::Language::Parser.parse(query_string)
 

@@ -98,7 +98,7 @@ module GraphQL
 
       end
 
-      INTROSPECTION_TYPES = <<-schema
+      INTROSPECTION_TYPES = <<-GRAPHQL_SCHEMA
 
         # A String Value
         scalar String
@@ -251,7 +251,7 @@ module GraphQL
           # an input object field definition
           INPUT_FIELD_DEFINITION
         }
-      schema
+      GRAPHQL_SCHEMA
     end
   end
 
@@ -275,9 +275,9 @@ module GraphQL
       field :fields do |args, context|
         _fields = (resolved_interfaces(context.schema).flat_map(&.fields) + fields)
           .reduce(Hash(String, FieldDefinition).new) do |dict, field|
-          dict[field.name] = field
-          dict
-        end.values.sort_by &.name
+            dict[field.name] = field
+            dict
+          end.values.sort_by &.name
         if args["includeDeprecated"]
           _fields
         else

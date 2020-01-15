@@ -2,7 +2,7 @@ require "./token"
 
 class GraphQL::Language::ParserContext
   @current_token : Token
-  @comments = [] of String
+  @descriptions = [] of String
 
   def initialize(source : String, lexer : Language::Lexer)
     @source = source
@@ -16,11 +16,7 @@ class GraphQL::Language::ParserContext
   end
 
   def dispose
-    raise Exception.new("ParserContext has {comments.Count} not applied comments.") if (comments.Count > 0)
-  end
-
-  def get_comment
-    @comments.size > 0 ? @comments.pop : nil
+    raise Exception.new("ParserContext has {descriptions.Count} not applied comments.") if (descriptions.Count > 0)
   end
 
   private def advance
@@ -78,7 +74,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def create_operation_definition(start, operation, name)
-    comment = get_comment
+    description = @descriptions.pop?
     Language::OperationDefinition.new(
       operation_type: operation,
       name: name,
@@ -89,7 +85,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def create_operation_definition(start)
-    comment = get_comment
+    description = @descriptions.pop?
     Language::OperationDefinition.new(
       operation_type: "query",
       name: nil,
@@ -164,7 +160,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_argument
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
 
     Language::Argument.new(
@@ -196,6 +192,7 @@ class GraphQL::Language::ParserContext
 
   private def parse_definition
     parse_comment
+    parse_description
 
     if peek(Token::Kind::BRACE_L)
       return parse_operation_definition
@@ -240,8 +237,29 @@ class GraphQL::Language::ParserContext
     end
 
     comment = text.join("\n")
-    @comments.push(comment)
     comment
+  end
+
+  private def parse_description
+    is_block = peek(Token::Kind::BLOCK_STRING)
+    if !peek(Token::Kind::STRING) && !is_block
+      return nil
+    end
+
+    text = [] of String?
+    start = @current_token.start_position
+    end_position : Int32
+
+    loop do
+      text.push(@current_token.value)
+      end_position = @current_token.end_position
+      advance
+      break unless @current_token.kind == (is_block ? Token::Kind::BLOCK_STRING : Token::Kind::STRING)
+    end
+
+    description = text.join("\n")
+    @descriptions.push(description)
+    description
   end
 
   private def parse_directive
@@ -254,7 +272,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_directive_definition
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
     expect_keyword("directive")
     expect(Token::Kind::AT)
@@ -269,7 +287,7 @@ class GraphQL::Language::ParserContext
       name: name,
       arguments: args,
       locations: locations,
-      description: comment
+      description: description
     )
   end
 
@@ -301,7 +319,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_enum_type_definition
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
     expect_keyword("enum")
 
@@ -309,7 +327,7 @@ class GraphQL::Language::ParserContext
       name: parse_name,
       directives: parse_directives,
       fvalues: many(Token::Kind::BRACE_L, ->{ parse_enum_value_definition }, Token::Kind::BRACE_R),
-      description: comment,
+      description: description,
     )
   end
 
@@ -319,19 +337,23 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_enum_value_definition
-    comment = get_comment
+    parse_description
+
+    description = @descriptions.pop?
     start = @current_token.start_position
 
     Language::EnumValueDefinition.new(
       name: parse_name,
       directives: parse_directives,
       selection: nil,
-      description: comment,
+      description: description,
     )
   end
 
   private def parse_field_definition
-    comment = get_comment
+    parse_description
+
+    description = @descriptions.pop?
     start = @current_token.start_position
     name = parse_name
     args = parse_argument_defs
@@ -342,7 +364,7 @@ class GraphQL::Language::ParserContext
       arguments: args,
       type: parse_type,
       directives: parse_directives,
-      description: comment,
+      description: description,
     )
   end
 
@@ -381,7 +403,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_fragment_definition
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
     expect_keyword("fragment")
 
@@ -418,7 +440,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_input_object_type_definition
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
     expect_keyword("input")
 
@@ -426,12 +448,13 @@ class GraphQL::Language::ParserContext
       name: parse_name,
       directives: parse_directives(),
       fields: any(Token::Kind::BRACE_L, ->{ parse_input_value_def }, Token::Kind::BRACE_R),
-      description: comment,
+      description: description,
     )
   end
 
   private def parse_input_value_def
-    comment = get_comment
+    parse_description
+    description = @descriptions.pop?
     start = @current_token.start_position
     name = parse_name
     expect(Token::Kind::COLON)
@@ -440,7 +463,7 @@ class GraphQL::Language::ParserContext
       type: parse_type,
       default_value: Language.to_fvalue(get_default_constant_value),
       directives: parse_directives,
-      description: comment,
+      description: description,
     )
   end
 
@@ -451,7 +474,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_interface_type_definition
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
     expect_keyword("interface")
 
@@ -459,7 +482,7 @@ class GraphQL::Language::ParserContext
       name: parse_name,
       directives: parse_directives,
       fields: any(Token::Kind::BRACE_L, ->{ parse_field_definition }, Token::Kind::BRACE_R),
-      description: comment,
+      description: description,
     )
   end
 
@@ -529,7 +552,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_object(is_constant)
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
 
     Language::InputObject.new(arguments: parse_object_fields(is_constant))
@@ -541,7 +564,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_object_field(is_constant)
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
     Language::Argument.new(
       name: parse_name,
@@ -561,14 +584,14 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_object_type_definition
-    comment = get_comment
+    description = @descriptions.pop?
 
     start = @current_token.start_position
     expect_keyword("type")
 
     Language::ObjectTypeDefinition.new(
       name: parse_name,
-      description: comment,
+      description: description,
       interfaces: parse_implements_interfaces,
       directives: parse_directives,
       fields: any(Token::Kind::BRACE_L, ->{ parse_field_definition }, Token::Kind::BRACE_R),
@@ -601,7 +624,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_scalar_type_definition
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
     expect_keyword("scalar")
     name = parse_name
@@ -610,12 +633,12 @@ class GraphQL::Language::ParserContext
     Language::ScalarTypeDefinition.new(
       name: name,
       directives: directives,
-      description: comment,
+      description: description,
     )
   end
 
   private def parse_schema_definition
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
     expect_keyword("schema")
     directives = parse_directives
@@ -689,7 +712,7 @@ class GraphQL::Language::ParserContext
   end
 
   private def parse_union_type_definition
-    comment = get_comment
+    description = @descriptions.pop?
     start = @current_token.start_position
     expect_keyword("union")
     name = parse_name
@@ -701,7 +724,7 @@ class GraphQL::Language::ParserContext
       name: name,
       directives: directives,
       types: types,
-      description: comment,
+      description: description,
     )
   end
 
@@ -718,6 +741,8 @@ class GraphQL::Language::ParserContext
     when Token::Kind::FLOAT
       return parse_float(is_constant)
     when Token::Kind::STRING
+      return parse_string(is_constant)
+    when Token::Kind::BLOCK_STRING
       return parse_string(is_constant)
     when Token::Kind::NAME
       return parse_name_value(is_constant)
@@ -762,6 +787,7 @@ class GraphQL::Language::ParserContext
 
   private def skip(kind)
     parse_comment
+
     is_current_token_matching = @current_token.kind == kind
     advance if is_current_token_matching
     is_current_token_matching

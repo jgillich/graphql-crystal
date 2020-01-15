@@ -34,7 +34,7 @@ class GraphQL::Language::LexerContext
   def read_comment : Token
     start = @current_index
     chunk_start = (@current_index += 1)
-    
+
     code = get_code
     value = ""
 
@@ -75,9 +75,9 @@ class GraphQL::Language::LexerContext
 
   def read_string : Token
     start = @current_index
-    value = process_string_chunks()
+    value, is_block = process_string_chunks()
 
-    Token.new(Token::Kind::STRING, value, start, @current_index + 1)
+    Token.new(is_block ? Token::Kind::STRING : Token::Kind::BLOCK_STRING, value, start, @current_index + 1)
   end
 
   private def is_valid_name_character(code) : Bool
@@ -240,18 +240,22 @@ class GraphQL::Language::LexerContext
   end
 
   private def process_string_chunks
-    chunk_start = (@current_index += 1)
+    is_block = @source[@current_index..@current_index + 2] == %(""")
+    chunk_start = (@current_index += (is_block ? 3 : 1))
     code = get_code
     value = ""
 
-    while is_not_at_the_end_of_query() && code.ord != 0x000A && code.ord != 0x000D && code != '"'
-      check_for_invalid_characters(code)
+    while is_not_at_the_end_of_query() && (is_block || code.ord != 0x000A && code.ord != 0x000D) && code != '"'
+      check_for_invalid_characters(code) unless is_block && code.ord == 0x000A
       code = process_character(pointerof(value), pointerof(chunk_start))
     end
 
-    check_string_termination(code)
     value += @source[chunk_start, (@current_index - chunk_start)]
-    value
+
+    check_string_termination(code)
+    2.times.each { check_string_termination(process_character(pointerof(value), pointerof(chunk_start))) } if is_block
+
+    {value, is_block}
   end
 
   private def read_digits(source, start, first_code)
